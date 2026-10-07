@@ -1,0 +1,96 @@
+<Window x:Class="SnapshotNotetaker.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:SnapshotNotetaker.Views"
+        Title="Settings — Snapshot Notetaker" Width="640" SizeToContent="Height" MaxHeight="900"
+        Style="{StaticResource ChromeWindow}" views:ChromeBehavior.Caption="Settings"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Icon="/Assets/app.ico"
+        Background="{DynamicResource Brush.Panel}" Foreground="{DynamicResource Brush.Text}"
+        FontFamily="Segoe UI" FontSize="12.5" TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+    <Window.Resources>
+        <Style x:Key="Heading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,18,0,8"/>
+        </Style>
+        <Style x:Key="Help" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Muted}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.PanelAlt}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="20,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="0,0,8,0" Click="Cancel_Click"/>
+                    <Button x:Name="SaveButton" Content="Save" IsDefault="True" MinWidth="90" Style="{StaticResource AccentButton}" Click="Save_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="FooterText" Style="{StaticResource Help}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,6,24,18">
+                <!-- Shortcuts -->
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Reset to defaults" VerticalAlignment="Bottom" Margin="0,0,0,6" Click="ResetHotkeys_Click"/>
+                    <TextBlock Text="Capture shortcuts" Style="{StaticResource Heading}"/>
+                </DockPanel>
+                <TextBlock Style="{StaticResource Help}" Margin="0,0,0,10"
+                           Text="These work system-wide while Snapshot Notetaker is running, even when it is minimized to the tray. Click a box and press the keys you want; Backspace clears it. Shortcuts are paused while this window is open."/>
+                <Grid x:Name="HotkeyGrid">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="190"/>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                </Grid>
+
+                <!-- Appearance -->
+                <TextBlock Text="Appearance" Style="{StaticResource Heading}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="190"/>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Theme" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="ThemeCombo" Grid.Column="1" SelectionChanged="ThemeCombo_SelectionChanged"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource Help}" Margin="12,0,0,0" VerticalAlignment="Center" Text="Previewed live."/>
+                </Grid>
+
+                <!-- Library -->
+                <TextBlock Text="Snapshot library" Style="{StaticResource Heading}"/>
+                <TextBlock Style="{StaticResource Help}" Margin="0,0,0,8"
+                           Text="Every capture and its annotations are saved here automatically. Each snapshot is a folder with the original image, its notes (document.json) and a preview."/>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                        <Button Content="Change…" Click="ChangeFolder_Click" Margin="0,0,6,0"/>
+                        <Button Content="Open" Click="OpenFolder_Click" Margin="0,0,6,0"/>
+                        <Button Content="Default" Click="DefaultFolder_Click" ToolTip="Use the default folder in AppData"/>
+                    </StackPanel>
+                    <TextBox x:Name="FolderBox" IsReadOnly="True"/>
+                </DockPanel>
+
+                <!-- Behaviour -->
+                <TextBlock Text="Behavior" Style="{StaticResource Heading}"/>
+                <CheckBox x:Name="TrayCheck" Content="Keep running in the notification area when the window is closed (keeps shortcuts active)" Margin="0,0,0,8"/>
+                <CheckBox x:Name="StartupCheck" Content="Start with Windows (in the notification area)" Margin="0,0,0,8"/>
+                <CheckBox x:Name="OpenLastCheck" Content="Reopen the last snapshot when the app starts" Margin="0,0,0,8"/>
+
+                <!-- Diagnostics -->
+                <TextBlock Text="Diagnostics" Style="{StaticResource Heading}"/>
+                <CheckBox x:Name="CrashReportsCheck" Content="Send crash reports automatically" Margin="0,0,0,4"/>
+                <TextBlock x:Name="CrashReportsHelp" Style="{StaticResource Help}" Margin="24,0,0,10"/>
+                <CheckBox x:Name="DetailedLoggingCheck" Content="Detailed logging (turn on while investigating a problem)" Margin="0,0,0,10"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Help &amp; support…" Margin="0,0,8,0" Click="Support_Click"/>
+                    <Button Content="Open log folder" Click="OpenLogs_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

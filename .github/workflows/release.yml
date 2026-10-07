@@ -1,0 +1,82 @@
+name: Release
+
+# Push a tag like v0.3.0 to build the downloads and create a draft GitHub release.
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (artifacts only, no release), e.g. 0.3.0-test"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Work out the version
+        shell: pwsh
+        run: |
+          $version = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.version }}" } else { "${{ github.ref_name }}".TrimStart("v") }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Test
+        if: matrix.runtime == 'win-x64'
+        run: dotnet test -c Release
+
+      - name: Build downloadable zip
+        shell: pwsh
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+          SUPPORT_URL: ${{ vars.SUPPORT_URL }}
+        run: >
+          ./scripts/publish.ps1 -Version $env:VERSION -Runtime ${{ matrix.runtime }}
+          -SentryDsn "$env:SENTRY_DSN" -SupportEmail "$env:SUPPORT_EMAIL" -SupportUrl "$env:SUPPORT_URL"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-notetaker-${{ matrix.runtime }}
+          path: artifacts/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}" dist/*
+          --repo "${{ github.repository }}"
+          --title "Snapshot Notetaker ${{ github.ref_name }}"
+          --generate-notes
+          --draft

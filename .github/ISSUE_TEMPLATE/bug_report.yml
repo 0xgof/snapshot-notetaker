@@ -1,0 +1,47 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The quickest way to get it fixed is a **support bundle**: in the app click **? → Help & support → Create support bundle** and drag the zip into the box below. It contains logs and system details, and no screenshots unless you choose to include one.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: |
+        1. Pressed PrintScreen on my second monitor
+        2. Dragged a region
+        3. The snapshot came out shifted 10 px to the right
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in ? → Help & support → About.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: download
+    attributes:
+      label: Which download?
+      options:
+        - win-x64
+        - win-arm64
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: bundle
+    attributes:
+      label: Support bundle
+      description: Drag the support bundle zip here (strongly recommended).
+  - type: textarea
+    id: setup
+    attributes:
+      label: Displays and anything else relevant
+      description: e.g. "laptop at 150 % + external 4K at 100 %", other screenshot tools running, theme.

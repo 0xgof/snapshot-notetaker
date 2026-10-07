@@ -1,0 +1,14 @@
+<Project>
+  <!-- Shared by every project. Release builds override Version from the git tag (see .github/workflows/release.yml). -->
+  <PropertyGroup>
+    <Version>0.2.0</Version>
+    <Product>Snapshot Notetaker</Product>
+    <Authors>Gerard Oliveras</Authors>
+    <Company>Gerard Oliveras</Company>
+    <Copyright>Copyright © 2026 Gerard Oliveras</Copyright>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- WinForms (tray icon only) analyzers want DPI settings in code; WPF reads them from app.manifest. -->
+    <NoWarn>$(NoWarn);WFAC010;WFO0003</NoWarn>
+  </PropertyGroup>
+</Project>

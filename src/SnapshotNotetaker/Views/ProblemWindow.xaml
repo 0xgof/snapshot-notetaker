@@ -1,0 +1,41 @@
+<Window x:Class="SnapshotNotetaker.Views.ProblemWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:SnapshotNotetaker.Views"
+        Title="Problem — Snapshot Notetaker" Width="580" SizeToContent="Height"
+        Style="{StaticResource ChromeWindow}" views:ChromeBehavior.Caption="Problem"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Icon="/Assets/app.ico"
+        Background="{DynamicResource Brush.Panel}" Foreground="{DynamicResource Brush.Text}"
+        FontFamily="Segoe UI" FontSize="12.5" TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.PanelAlt}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="18,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="SendButton" Content="Send report" Margin="0,0,8,0" Click="Send_Click"
+                            ToolTip="Send this error (technical details only, no screenshots or notes) to the developer"/>
+                    <Button Content="Close" IsCancel="True" IsDefault="True" MinWidth="90" Style="{StaticResource AccentButton}" Click="Close_Click"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource LinkButton}" Content="Create support bundle…" Click="Bundle_Click"/>
+                    <Button Style="{StaticResource LinkButton}" Content="Copy details" Click="Copy_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <StackPanel Margin="22,18,22,16">
+            <DockPanel>
+                <Border DockPanel.Dock="Left" Width="34" Height="34" CornerRadius="17" Background="{DynamicResource Brush.Danger}" Margin="0,0,14,0" VerticalAlignment="Top">
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE7BA;" Foreground="White" FontSize="15"/>
+                </Border>
+                <StackPanel>
+                    <TextBlock x:Name="HeadlineText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="ExplanationText" Foreground="{DynamicResource Brush.Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </StackPanel>
+            </DockPanel>
+            <Button x:Name="DetailsToggle" Style="{StaticResource LinkButton}" Content="Show technical details" HorizontalAlignment="Left" Margin="40,10,0,0" Click="DetailsToggle_Click"/>
+            <TextBox x:Name="DetailsBox" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" Height="190" Margin="0,6,0,0"
+                     FontFamily="Consolas" FontSize="11" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Visibility="Collapsed"/>
+            <TextBlock x:Name="StatusText" Foreground="{DynamicResource Brush.Muted}" Margin="40,8,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+    </DockPanel>
+</Window>

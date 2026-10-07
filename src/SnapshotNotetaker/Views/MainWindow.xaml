@@ -1,0 +1,428 @@
+<Window x:Class="SnapshotNotetaker.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:editor="clr-namespace:SnapshotNotetaker.Editor"
+        xmlns:views="clr-namespace:SnapshotNotetaker.Views"
+        Title="Snapshot Notetaker" Width="1440" Height="900" MinWidth="820" MinHeight="520"
+        Style="{StaticResource ChromeWindow}"
+        Icon="/Assets/app.ico"
+        Background="{DynamicResource Brush.Window}" Foreground="{DynamicResource Brush.Text}"
+        FontFamily="Segoe UI" FontSize="12.5"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True"
+        AllowDrop="True" WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <Visibility x:Key="ToolbarLabelVisibility">Visible</Visibility>
+        <!-- Library card -->
+        <DataTemplate x:Key="SnapshotCardTemplate">
+            <StackPanel Margin="7,7,7,8">
+                <Border CornerRadius="5" Background="{DynamicResource Brush.Canvas}" Height="118" ClipToBounds="True">
+                    <Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                </Border>
+                <TextBlock Text="{Binding DisplayTitle}" FontWeight="SemiBold" Margin="2,7,2,0" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding DisplayTitle}"/>
+                <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource Brush.Muted}" FontSize="11" Margin="2,2,2,0"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Notes sidebar row -->
+        <DataTemplate x:Key="NoteTemplate">
+            <Grid Margin="6,7,4,7">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <views:LabelPreview Annotation="{Binding}" Height="28" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1" Style="{StaticResource QuietTextBox}" FontWeight="SemiBold"
+                         Text="{Binding Tag, UpdateSourceTrigger=PropertyChanged}" views:Hint.Text="Tag"
+                         GotKeyboardFocus="NoteText_GotKeyboardFocus" LostKeyboardFocus="NoteText_LostKeyboardFocus"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="2,0,0,0" VerticalAlignment="Center">
+                    <Button Style="{StaticResource FlatButton}" MinHeight="24" Padding="5,2" ToolTip="Move up (renumbers)" Click="NoteUp_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE70E;" FontSize="10"/>
+                    </Button>
+                    <Button Style="{StaticResource FlatButton}" MinHeight="24" Padding="5,2" ToolTip="Move down (renumbers)" Click="NoteDown_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="10"/>
+                    </Button>
+                    <Button Style="{StaticResource FlatButton}" MinHeight="24" Padding="5,2" ToolTip="Delete this area" Click="NoteDelete_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE74D;" FontSize="11"/>
+                    </Button>
+                </StackPanel>
+                <TextBox x:Name="CommentBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource QuietTextBox}"
+                         Text="{Binding Comment, UpdateSourceTrigger=PropertyChanged}" views:Hint.Text="Add a comment…"
+                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" MaxHeight="240" VerticalContentAlignment="Top"
+                         VerticalScrollBarVisibility="Auto" Margin="0,2,0,0"
+                         GotKeyboardFocus="NoteText_GotKeyboardFocus" LostKeyboardFocus="NoteText_LostKeyboardFocus"/>
+            </Grid>
+        </DataTemplate>
+
+        <Style x:Key="NoteItem" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <EventSetter Event="PreviewGotKeyboardFocus" Handler="NoteItem_PreviewGotKeyboardFocus"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Bd" Background="Transparent" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                                <ContentPresenter/>
+                            </Border>
+                            <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Background="{DynamicResource Brush.Accent}" Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.PanelAlt}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}"/>
+                                <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BarCombo" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="BarCheck" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="Margin" Value="6,0"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- ============================================== Main toolbar -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+            <DockPanel Margin="6,5">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="ZoomOutButton" Style="{StaticResource FlatButton}" ToolTip="Zoom out (Ctrl+−)" Click="ZoomOut_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE71F;"/>
+                    </Button>
+                    <Button x:Name="ZoomLevelButton" Style="{StaticResource FlatButton}" MinWidth="58" ToolTip="Actual pixels (Ctrl+1)" Click="ZoomActual_Click">
+                        <TextBlock x:Name="ZoomText" Text="100%" FontWeight="SemiBold"/>
+                    </Button>
+                    <Button x:Name="ZoomInButton" Style="{StaticResource FlatButton}" ToolTip="Zoom in (Ctrl++)" Click="ZoomIn_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE8A3;"/>
+                    </Button>
+                    <Button x:Name="FitButton" Style="{StaticResource FlatButton}" ToolTip="Fit to window (Ctrl+0)" Click="Fit_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE9A6;"/>
+                    </Button>
+                    <Rectangle Style="{StaticResource BarSeparator}"/>
+                    <ToggleButton x:Name="LibraryToggle" Style="{StaticResource FlatButton}" ToolTip="Show / hide snapshot library (Ctrl+L)" Click="LibraryToggle_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE8B9;"/>
+                            <TextBlock Text="Library" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="NotesToggle" Style="{StaticResource FlatButton}" ToolTip="Show / hide notes sidebar (Ctrl+B)" Click="NotesToggle_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70B;"/>
+                            <TextBlock Text="Notes" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Rectangle Style="{StaticResource BarSeparator}"/>
+                    <Button x:Name="HelpButton" Style="{StaticResource FlatButton}" ToolTip="Help &amp; support — report a problem, logs, version" Click="HelpMenu_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE897;"/>
+                    </Button>
+                    <Button x:Name="ThemeButton" Style="{StaticResource FlatButton}" ToolTip="Theme" Click="ThemeButton_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE790;"/>
+                    </Button>
+                    <Button x:Name="SettingsButton" Style="{StaticResource FlatButton}" ToolTip="Settings — shortcuts, library folder, theme" Click="Settings_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE713;"/>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="RegionButton" Style="{StaticResource FlatButton}" Click="CaptureRegion_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE7A8;" Foreground="{DynamicResource Brush.Accent}"/>
+                            <TextBlock Text="Region" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="WindowButton" Style="{StaticResource FlatButton}" Click="CaptureWindowMenu_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE737;"/>
+                            <TextBlock Text="Window" Margin="6,0,4,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="8"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ScreenButton" Style="{StaticResource FlatButton}" Click="CaptureScreenMenu_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE7F4;"/>
+                            <TextBlock Text="Full screen" Margin="6,0,4,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="8"/>
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Style="{StaticResource BarSeparator}"/>
+                    <Button Style="{StaticResource FlatButton}" ToolTip="Import an image or .snapnote file into the library (Ctrl+O)" Click="Import_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE8E5;"/>
+                            <TextBlock Text="Import" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ExportButton" Style="{StaticResource FlatButton}" Click="ExportMenu_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE72D;"/>
+                            <TextBlock Text="Export" Margin="6,0,4,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="8"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="CopyButton" Style="{StaticResource FlatButton}" Click="Copy_Click"
+                            ToolTip="Copy the snapshot exactly as shown — with its comments when Expand is on — to paste into chat, email or a ticket (Ctrl+Shift+C)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE8C8;"/>
+                            <TextBlock Text="Copy" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Style="{StaticResource BarSeparator}"/>
+                    <ToggleButton x:Name="ExpandToggle" Style="{StaticResource FlatButton}" Click="ExpandToggle_Click"
+                                  ToolTip="Expand the image to include the tags and comments, ready for handover. Copy and Export use this view (Ctrl+Shift+E)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE740;"/>
+                            <TextBlock Text="Expand" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{DynamicResource ToolbarLabelVisibility}"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Button x:Name="ExpandLayoutButton" Style="{StaticResource FlatButton}" Padding="4,4" ToolTip="How comments are laid out when expanded" Click="ExpandLayout_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="8"/>
+                    </Button>
+                    <Rectangle Style="{StaticResource BarSeparator}"/>
+                    <Button x:Name="UndoButton" Style="{StaticResource FlatButton}" ToolTip="Undo (Ctrl+Z)" Click="Undo_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE7A7;"/>
+                    </Button>
+                    <Button x:Name="RedoButton" Style="{StaticResource FlatButton}" ToolTip="Redo (Ctrl+Y)" Click="Redo_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE7A6;"/>
+                    </Button>
+                    <Button x:Name="DeleteButton" Style="{StaticResource FlatButton}" ToolTip="Delete selected (Del)" Click="Delete_Click">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE74D;"/>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================================== Properties bar -->
+        <Border x:Name="PropertiesBar" DockPanel.Dock="Top" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+            <WrapPanel Margin="6,3">
+                <!-- Says what the bar is editing: the selected areas, or the style the next areas will get. -->
+                <Border x:Name="PropertiesTarget" Background="{DynamicResource Brush.AccentSoft}" CornerRadius="10" Padding="9,2" Margin="4,0,4,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="PropertiesTargetText" Text="New areas" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent}"/>
+                </Border>
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="LINE" Style="{StaticResource SectionLabel}"/>
+                    <Button x:Name="StrokeColorButton" Style="{StaticResource FlatButton}" Padding="6,4" ToolTip="Line color (also used for the fill and the label)" Click="StrokeColor_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="StrokeColorSwatch" Width="18" Height="18" CornerRadius="4" BorderThickness="1" BorderBrush="#40000000" Background="Red"/>
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="8" Margin="5,0,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <ComboBox x:Name="StrokeWidthCombo" Style="{StaticResource BarCombo}" Width="72" ToolTip="Line width" SelectionChanged="StrokeWidth_Changed"/>
+                    <ComboBox x:Name="DashCombo" Style="{StaticResource BarCombo}" Width="84" ToolTip="Line style" SelectionChanged="Dash_Changed"/>
+                    <CheckBox x:Name="OutlineCheck" Style="{StaticResource BarCheck}" Content="Halo" ToolTip="Contrasting outline around the line, for busy backgrounds" Click="Outline_Click"/>
+                    <CheckBox x:Name="ClosedCheck" Style="{StaticResource BarCheck}" Content="Closed loop" ToolTip="Join the spline's ends into a loop" Click="Closed_Click"/>
+                </StackPanel>
+                <Rectangle Style="{StaticResource BarSeparator}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="FILL" Style="{StaticResource SectionLabel}"/>
+                    <ComboBox x:Name="FillCombo" Style="{StaticResource BarCombo}" Width="92" ToolTip="Tint the inside of the area with the line color" SelectionChanged="Fill_Changed"/>
+                </StackPanel>
+                <Rectangle Style="{StaticResource BarSeparator}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="LABEL" Style="{StaticResource SectionLabel}"/>
+                    <ComboBox x:Name="LabelModeCombo" Style="{StaticResource BarCombo}" Width="116" ToolTip="What the label shows" SelectionChanged="LabelMode_Changed"/>
+                    <ComboBox x:Name="LabelShapeCombo" Style="{StaticResource BarCombo}" Width="104" ToolTip="Label style" SelectionChanged="LabelShape_Changed"/>
+                    <ComboBox x:Name="LabelAnchorCombo" Style="{StaticResource BarCombo}" Width="104" ToolTip="Where the label attaches" SelectionChanged="LabelAnchor_Changed"/>
+                    <ComboBox x:Name="LabelPlacementCombo" Style="{StaticResource BarCombo}" Width="88" ToolTip="Outside, on the edge or inside the shape" SelectionChanged="LabelPlacement_Changed"/>
+                    <ComboBox x:Name="LabelSchemeCombo" Style="{StaticResource BarCombo}" Width="112" ToolTip="Label colors (readability)" SelectionChanged="LabelScheme_Changed"/>
+                    <Button x:Name="LabelColorButton" Style="{StaticResource FlatButton}" Padding="6,4" ToolTip="Custom label color" Click="LabelColor_Click">
+                        <Border x:Name="LabelColorSwatch" Width="18" Height="18" CornerRadius="4" BorderThickness="1" BorderBrush="#40000000" Background="Gold"/>
+                    </Button>
+                    <ComboBox x:Name="LabelSizeCombo" Style="{StaticResource BarCombo}" Width="64" ToolTip="Label text size" SelectionChanged="LabelSize_Changed"/>
+                    <CheckBox x:Name="LabelBorderCheck" Style="{StaticResource BarCheck}" Content="Border" ToolTip="Contrasting border around the label" Click="LabelBorder_Click"/>
+                    <CheckBox x:Name="LabelShadowCheck" Style="{StaticResource BarCheck}" Content="Shadow" Click="LabelShadow_Click"/>
+                    <Button Style="{StaticResource LinkButton}" Content="Apply to all" ToolTip="Use this label style for every area in the snapshot" Click="ApplyLabelToAll_Click"/>
+                </StackPanel>
+                <Rectangle Style="{StaticResource BarSeparator}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="NUMBERING" Style="{StaticResource SectionLabel}"/>
+                    <ComboBox x:Name="NumberFormatCombo" Style="{StaticResource BarCombo}" Width="92" ToolTip="Number format" SelectionChanged="NumberFormat_Changed"/>
+                    <TextBox x:Name="PrefixBox" Width="56" Margin="2,0" views:Hint.Text="Prefix" ToolTip="Prefix, e.g. # or P-"
+                             TextChanged="Numbering_TextChanged" GotKeyboardFocus="NoteText_GotKeyboardFocus" LostKeyboardFocus="NoteText_LostKeyboardFocus"/>
+                    <TextBox x:Name="StartBox" Width="44" Margin="2,0" views:Hint.Text="Start" ToolTip="First number"
+                             TextChanged="Numbering_TextChanged" GotKeyboardFocus="NoteText_GotKeyboardFocus" LostKeyboardFocus="NoteText_LostKeyboardFocus"/>
+                </StackPanel>
+            </WrapPanel>
+        </Border>
+
+        <!-- ============================================== Notice bar (crash last time, crash-report consent…) -->
+        <Border x:Name="InfoBar" DockPanel.Dock="Top" Visibility="Collapsed" Background="{DynamicResource Brush.AccentSoft}"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1" Padding="14,7,8,7">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" MinHeight="26" Padding="6,2" ToolTip="Dismiss" Click="InfoBarClose_Click">
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE711;" FontSize="10"/>
+                </Button>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="14,0,6,0" VerticalAlignment="Center">
+                    <Button x:Name="InfoBarSecondary" Margin="0,0,8,0" Click="InfoBarSecondary_Click"/>
+                    <Button x:Name="InfoBarPrimary" Style="{StaticResource AccentButton}" Click="InfoBarPrimary_Click"/>
+                </StackPanel>
+                <TextBlock Style="{StaticResource Glyph}" Text="&#xE946;" Foreground="{DynamicResource Brush.Accent}" Margin="0,0,10,0"/>
+                <TextBlock x:Name="InfoBarText" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================================== Status bar -->
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+            <DockPanel Margin="10,3" TextElement.Foreground="{DynamicResource Brush.Muted}" TextElement.FontSize="11.5">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock x:Name="SaveStateText" Margin="14,0,0,0"/>
+                    <TextBlock x:Name="CursorText" Margin="14,0,0,0" MinWidth="80"/>
+                    <TextBlock x:Name="SelectionText" Margin="14,0,0,0"/>
+                    <TextBlock x:Name="ImageSizeText" Margin="14,0,0,0"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusText" TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================================== Work area -->
+        <Grid x:Name="WorkArea">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LibraryColumn" Width="240" MinWidth="0" MaxWidth="520"/>
+                <ColumnDefinition x:Name="LibrarySplitterColumn" Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="240"/>
+                <ColumnDefinition x:Name="NotesSplitterColumn" Width="Auto"/>
+                <ColumnDefinition x:Name="NotesColumn" Width="330" MinWidth="0" MaxWidth="640"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Library -->
+            <Border x:Name="LibraryPanel" Background="{DynamicResource Brush.Panel}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="10,10,10,6">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" MinHeight="24" Padding="5,2" ToolTip="Open the library folder" Click="OpenLibraryFolder_Click">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE8B7;" FontSize="12"/>
+                            </Button>
+                            <TextBlock Text="Snapshots" FontWeight="SemiBold" FontSize="13.5" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="LibraryCountText" Foreground="{DynamicResource Brush.Muted}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBox x:Name="SearchBox" Margin="0,8,0,0" views:Hint.Text="Search titles, tags and notes" TextChanged="Search_TextChanged"/>
+                    </StackPanel>
+                    <Grid>
+                        <ListBox x:Name="LibraryList" ItemTemplate="{StaticResource SnapshotCardTemplate}" ItemContainerStyle="{StaticResource CardItem}"
+                                 SelectionMode="Single" SelectionChanged="LibraryList_SelectionChanged" KeyDown="LibraryList_KeyDown"
+                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Export image…" Click="LibraryExport_Click"/>
+                                    <MenuItem Header="Copy image" Click="LibraryCopy_Click"/>
+                                    <MenuItem Header="Export .snapnote file…" Click="LibraryExportSnapnote_Click"/>
+                                    <MenuItem Header="Show in folder" Click="LibraryShowInFolder_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Rename" Click="LibraryRename_Click"/>
+                                    <MenuItem Header="Delete" InputGestureText="Del" Click="LibraryDelete_Click"/>
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                        </ListBox>
+                        <TextBlock x:Name="LibraryEmptyText" Text="Your snapshots will appear here.&#x0a;They are saved automatically." TextAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Muted}" HorizontalAlignment="Center" Margin="12,40,12,0" TextWrapping="Wrap"/>
+                    </Grid>
+                </DockPanel>
+            </Border>
+            <GridSplitter x:Name="LibrarySplitter" Grid.Column="1" Width="1" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"
+                          DragCompleted="Splitter_DragCompleted"/>
+
+            <!-- Tools -->
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
+                <StackPanel Margin="5,8">
+                    <RadioButton x:Name="ToolSelect" Style="{StaticResource ToolButton}" Tag="Select" Checked="Tool_Checked" ToolTip="Select and edit (V)">
+                        <Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Select}"/>
+                    </RadioButton>
+                    <Rectangle Height="1" Margin="6,6" Fill="{DynamicResource Brush.Border}"/>
+                    <RadioButton x:Name="ToolRectangle" Style="{StaticResource ToolButton}" Tag="Rectangle" Checked="Tool_Checked" ToolTip="Rectangle (R) — hold Shift for a square, Alt to draw from the center">
+                        <Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Rectangle}"/>
+                    </RadioButton>
+                    <RadioButton x:Name="ToolSquare" Style="{StaticResource ToolButton}" Tag="Square" Checked="Tool_Checked" ToolTip="Square (Q)">
+                        <Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Square}"/>
+                    </RadioButton>
+                    <RadioButton x:Name="ToolEllipse" Style="{StaticResource ToolButton}" Tag="Ellipse" Checked="Tool_Checked" ToolTip="Oval (E) — hold Shift for a circle">
+                        <Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Ellipse}"/>
+                    </RadioButton>
+                    <RadioButton x:Name="ToolCircle" Style="{StaticResource ToolButton}" Tag="Circle" Checked="Tool_Checked" ToolTip="Circle (C)">
+                        <Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Circle}"/>
+                    </RadioButton>
+                    <RadioButton x:Name="ToolSpline" Style="{StaticResource ToolButton}" Tag="Spline" Checked="Tool_Checked"
+                                 ToolTip="Spline (P) — drag to draw freehand (closes itself when you end near the start), or click to place points; click the first point to close, double-click / Enter to finish">
+                        <Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Spline}"/>
+                    </RadioButton>
+                </StackPanel>
+            </Border>
+
+            <!-- Viewport -->
+            <Grid Grid.Column="3">
+                <editor:EditorSurface x:Name="Surface" Background="{DynamicResource Brush.Canvas}" Accent="{DynamicResource Color.Accent}"/>
+                <Border x:Name="EmptyState" Background="{DynamicResource Brush.Canvas}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
+                        <TextBlock Text="Capture something to annotate" FontSize="22" FontWeight="SemiBold" Foreground="#F2F3F5" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="EmptyHint" Foreground="#A7ABB3" FontSize="13" Margin="0,8,0,24" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <UniformGrid Columns="3" HorizontalAlignment="Center">
+                            <Button Style="{StaticResource AccentButton}" Margin="6" Padding="18,12" Click="CaptureRegion_Click">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE7A8;" FontSize="22"/>
+                                    <TextBlock Text="Region" Margin="0,6,0,0" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource AccentButton}" Margin="6" Padding="18,12" Click="CaptureWindowPick_Click">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE737;" FontSize="22"/>
+                                    <TextBlock Text="Window" Margin="0,6,0,0" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource AccentButton}" Margin="6" Padding="18,12" Click="CaptureScreen_Click">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE7F4;" FontSize="22"/>
+                                    <TextBlock Text="Full screen" Margin="0,6,0,0" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+                        <TextBlock Foreground="#A7ABB3" Margin="0,20,0,0" HorizontalAlignment="Center" TextAlignment="Center">
+                            <Run Text="or drop an image here, paste one with Ctrl+V, or"/>
+                            <Hyperlink Click="Import_Click" Foreground="#8AB4FF">import a file</Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <GridSplitter x:Name="NotesSplitter" Grid.Column="4" Width="1" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"
+                          DragCompleted="Splitter_DragCompleted"/>
+
+            <!-- Notes sidebar -->
+            <Border x:Name="NotesPanel" Grid.Column="5" Background="{DynamicResource Brush.Panel}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="10,10,10,4">
+                        <TextBox x:Name="TitleBox" Style="{StaticResource QuietTextBox}" FontSize="15" FontWeight="SemiBold" views:Hint.Text="Snapshot title"
+                                 TextChanged="TitleBox_TextChanged"/>
+                        <DockPanel Margin="4,4,0,4">
+                            <TextBlock x:Name="NotesCountText" DockPanel.Dock="Right" Foreground="{DynamicResource Brush.Muted}"/>
+                            <TextBlock x:Name="CapturedText" Foreground="{DynamicResource Brush.Muted}" TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+                    </StackPanel>
+                    <Rectangle DockPanel.Dock="Top" Height="1" Fill="{DynamicResource Brush.Border}"/>
+                    <Grid>
+                        <ListBox x:Name="NotesList" ItemTemplate="{StaticResource NoteTemplate}" ItemContainerStyle="{StaticResource NoteItem}"
+                                 SelectionMode="Extended" SelectionChanged="NotesList_SelectionChanged" KeyboardNavigation.TabNavigation="Continue"/>
+                        <TextBlock x:Name="NotesEmptyText" Foreground="{DynamicResource Brush.Muted}" TextAlignment="Center" TextWrapping="Wrap"
+                                   Margin="20,36,20,0" HorizontalAlignment="Center"
+                                   Text="Draw a rectangle, circle or spline on the snapshot. Each area gets a number here so you can comment on it."/>
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
