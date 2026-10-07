@@ -159,7 +159,7 @@ public class PersistenceTests
         }
         finally
         {
-            File.Delete(path);
+            try { File.Delete(path); } catch (IOException) { /* scanner may still hold it; it's a temp file */ }
         }
     });
 
@@ -237,7 +237,8 @@ public class FileUtilTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            // Antivirus on CI runners can briefly hold the files just written; a leftover temp folder is harmless.
+            try { Directory.Delete(dir, true); } catch (IOException) { }
         }
     }
 }
