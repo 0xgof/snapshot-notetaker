@@ -50,7 +50,7 @@ jobs:
           ./scripts/publish.ps1 -Version $env:VERSION -Runtime ${{ matrix.runtime }}
           -SentryDsn "$env:SENTRY_DSN" -SupportEmail "$env:SUPPORT_EMAIL" -SupportUrl "$env:SUPPORT_URL"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: snapshot-notetaker-${{ matrix.runtime }}
           path: artifacts/*.zip
