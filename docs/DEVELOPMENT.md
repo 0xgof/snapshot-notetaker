@@ -52,6 +52,7 @@ SnapshotNotetaker.exe --ui-snapshot <file.png> [theme] [--expand] [--narrow]   #
 SnapshotNotetaker.exe --dialog-snapshot settings|support|problem <file.png> [theme]
 SnapshotNotetaker.exe --capture-test <dir>                      # capture each display, report sizes/brightness
 SnapshotNotetaker.exe --overlay-test <dir>                      # check overlays cover each monitor exactly
+SnapshotNotetaker.exe --textbox-check <dir>                     # check placeholders line up with typed text/caret
 ```
 
 The README screenshots in `docs/images` were made with `--ui-snapshot` and `--render-demo`.

@@ -157,7 +157,9 @@
                                        Foreground="{DynamicResource Brush.Muted}" Margin="{TemplateBinding Padding}" Padding="2,0,0,0"
                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" TextWrapping="Wrap"
                                        IsHitTestVisible="False" Visibility="Collapsed"/>
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+                            <!-- No Margin here: TextBoxBase already applies Padding to its content; adding it again pushed typed text
+                                 (and the caret) right of the placeholder. -->
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>
                         </Grid>

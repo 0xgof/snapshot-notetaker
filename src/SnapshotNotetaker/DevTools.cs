@@ -45,6 +45,9 @@ internal static class DevTools
             case "--settings-snapshot":
                 _ = DialogSnapshotAsync(app, "settings", args[1], args.Length > 2 ? args[2] : "Light");
                 return true;
+            case "--textbox-check":
+                _ = TextBoxCheckAsync(app, args[1]);
+                return true;
             case "--dialog-snapshot": // --dialog-snapshot <settings|support|problem> <file.png> [theme]
                 _ = DialogSnapshotAsync(app, args[1], args.Length > 2 ? args[2] : "out.png", args.Length > 3 ? args[3] : "Light");
                 return true;
@@ -157,6 +160,77 @@ internal static class DevTools
         {
             File.WriteAllText(output + ".error.txt", ex.ToString());
         }
+        app.Shutdown();
+    }
+
+    /// <summary>
+    /// Checks that a TextBox's placeholder starts exactly where typed text (and the caret) starts:
+    /// renders a box with text and one with only the hint, for each TextBox style, and reports the left edge of the ink.
+    /// </summary>
+    private static async Task TextBoxCheckAsync(App app, string output)
+    {
+        var report = new List<string>();
+        try
+        {
+            app.StartSandbox(new AppSettings { Theme = "Light" });
+            var panel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20), Background = Brushes.White };
+            var pairs = new List<(string Style, System.Windows.Controls.TextBox Typed, System.Windows.Controls.TextBox Hinted)>();
+            foreach (var styleKey in new[] { "(default)", "QuietTextBox" })
+            {
+                System.Windows.Controls.TextBox Make(string text, string hint)
+                {
+                    var box = new System.Windows.Controls.TextBox { Text = text, Width = 160, Margin = new Thickness(0, 0, 0, 10), FontSize = 12.5, FontFamily = new FontFamily("Segoe UI") };
+                    if (styleKey != "(default)") box.Style = (Style)app.FindResource(styleKey);
+                    Views.Hint.SetText(box, hint);
+                    panel.Children.Add(box);
+                    return box;
+                }
+                pairs.Add((styleKey, Make("Prefix", ""), Make("", "Prefix")));
+            }
+            var window = new Window { Content = panel, SizeToContent = SizeToContent.WidthAndHeight, WindowStyle = WindowStyle.None, Background = Brushes.White, ShowInTaskbar = false };
+            window.Show();
+            await Task.Delay(400);
+            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+
+            var bitmap = new RenderTargetBitmap((int)panel.ActualWidth + 40, (int)panel.ActualHeight + 40, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(panel);
+            Exporter.SaveImage(bitmap, Path.Combine(output, "textboxes.png"));
+
+            (double Left, double Top) Ink(System.Windows.Controls.TextBox box)
+            {
+                // The bitmap includes the panel's own offset (its margin), so measure relative to the window content root.
+                var r = box.TransformToAncestor(panel).TransformBounds(new Rect(box.RenderSize));
+                var offset = VisualTreeHelper.GetOffset(panel);
+                r.Offset(offset.X, offset.Y);
+                int x0 = (int)r.Left + 3, x1 = (int)r.Right - 3, y0 = (int)r.Top + 3, y1 = (int)r.Bottom - 3;
+                var px = new byte[4];
+                bool IsInk(int x, int y)
+                {
+                    bitmap.CopyPixels(new Int32Rect(x, y, 1, 1), px, 4, 0);
+                    return px[0] < 200 && px[1] < 200 && px[2] < 200;
+                }
+                double left = double.NaN, top = double.NaN;
+                for (int x = x0; x < x1 && double.IsNaN(left); x++)
+                    for (int y = y0; y < y1; y++) if (IsInk(x, y)) { left = x - r.Left; break; }
+                for (int y = y0; y < y1 && double.IsNaN(top); y++)
+                    for (int x = x0; x < x1; x++) if (IsInk(x, y)) { top = y - r.Top; break; }
+                return (left, top);
+            }
+            foreach (var (style, typed, hinted) in pairs)
+            {
+                var a = Ink(typed);
+                var b = Ink(hinted);
+                report.Add($"{style}: typed text at ({a.Left:0},{a.Top:0}) px, placeholder at ({b.Left:0},{b.Top:0}) px, " +
+                           $"difference ({a.Left - b.Left:+0;-0;0},{a.Top - b.Top:+0;-0;0}) px");
+            }
+            window.Close();
+        }
+        catch (Exception ex)
+        {
+            report.Add(ex.ToString());
+        }
+        Directory.CreateDirectory(output);
+        File.WriteAllLines(Path.Combine(output, "textbox-report.txt"), report);
         app.Shutdown();
     }
 
