@@ -211,13 +211,9 @@
         <!-- ============================================== Properties bar -->
         <Border x:Name="PropertiesBar" DockPanel.Dock="Top" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
             <WrapPanel Margin="6,3">
-                <!-- Says what the bar is editing: the selected areas, or the style the next areas will get. -->
-                <Border x:Name="PropertiesTarget" Background="{DynamicResource Brush.AccentSoft}" CornerRadius="10" Padding="9,2" Margin="4,0,4,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="PropertiesTargetText" Text="New areas" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent}"/>
-                </Border>
                 <StackPanel Orientation="Horizontal" Margin="0,2">
-                    <TextBlock Text="LINE" Style="{StaticResource SectionLabel}"/>
-                    <Button x:Name="StrokeColorButton" Style="{StaticResource FlatButton}" Padding="6,4" ToolTip="Line color (also used for the fill and the label)" Click="StrokeColor_Click">
+                    <TextBlock Text="STYLE" Style="{StaticResource SectionLabel}"/>
+                    <Button x:Name="StrokeColorButton" Style="{StaticResource FlatButton}" Padding="6,4" ToolTip="Color" Click="StrokeColor_Click">
                         <StackPanel Orientation="Horizontal">
                             <Border x:Name="StrokeColorSwatch" Width="18" Height="18" CornerRadius="4" BorderThickness="1" BorderBrush="#40000000" Background="Red"/>
                             <TextBlock Style="{StaticResource Glyph}" Text="&#xE70D;" FontSize="8" Margin="5,0,0,0"/>
@@ -225,13 +221,9 @@
                     </Button>
                     <ComboBox x:Name="StrokeWidthCombo" Style="{StaticResource BarCombo}" Width="72" ToolTip="Line width" SelectionChanged="StrokeWidth_Changed"/>
                     <ComboBox x:Name="DashCombo" Style="{StaticResource BarCombo}" Width="84" ToolTip="Line style" SelectionChanged="Dash_Changed"/>
+                    <ComboBox x:Name="FillCombo" Style="{StaticResource BarCombo}" Width="92" ToolTip="Fill" SelectionChanged="Fill_Changed"/>
                     <CheckBox x:Name="OutlineCheck" Style="{StaticResource BarCheck}" Content="Halo" ToolTip="Contrasting outline around the line, for busy backgrounds" Click="Outline_Click"/>
-                    <CheckBox x:Name="ClosedCheck" Style="{StaticResource BarCheck}" Content="Closed loop" ToolTip="Join the spline's ends into a loop" Click="Closed_Click"/>
-                </StackPanel>
-                <Rectangle Style="{StaticResource BarSeparator}"/>
-                <StackPanel Orientation="Horizontal" Margin="0,2">
-                    <TextBlock Text="FILL" Style="{StaticResource SectionLabel}"/>
-                    <ComboBox x:Name="FillCombo" Style="{StaticResource BarCombo}" Width="92" ToolTip="Tint the inside of the area with the line color" SelectionChanged="Fill_Changed"/>
+                    <CheckBox x:Name="ClosedCheck" Style="{StaticResource BarCheck}" Content="Closed" ToolTip="Close the spline into a loop" Click="Closed_Click"/>
                 </StackPanel>
                 <Rectangle Style="{StaticResource BarSeparator}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,2">

@@ -1002,12 +1002,7 @@ public partial class MainWindow : Window
             Select(DashCombo, a?.Dash ?? d.Dash);
             SelectNearest(FillCombo, a?.FillOpacity ?? d.FillOpacity);
             OutlineCheck.IsChecked = a?.StrokeOutline ?? d.StrokeOutline;
-            int count = Surface.Selection.Count;
-            PropertiesTargetText.Text = count == 0 ? "New areas" : count == 1 ? "Selected area" : $"{count} selected areas";
-            PropertiesTarget.ToolTip = count == 0
-                ? "Nothing is selected: these settings are used for the next areas you draw."
-                : "Changes apply to the selection (and become the style for new areas).";
-            ClosedCheck.Visibility = a?.IsSpline == true ? Visibility.Visible : Visibility.Collapsed;
+            ClosedCheck.IsEnabled = a?.IsSpline == true;
             ClosedCheck.IsChecked = a?.IsSpline == true && a.IsClosed;
 
             Select(LabelModeCombo, a?.LabelMode ?? d.LabelMode);
